@@ -4,7 +4,7 @@ Deep-BGCpred, a framework that effectively addresses the aforementioned issue by
 
 
 
-![](https://github.com/yangziyi1990/Deep-BGCpred/blob/main/images/Figure1_pipeline.png)
+![](/Users/yangziyi/Documents/Github/Deep-BGCpred/images/Figure1_pipeline.png)
 
 If you find this code useful in your research, then please cite:
 
@@ -251,6 +251,9 @@ $ python main.py pipeline mySequence.fa --pcfile --pfam-clain-file Pfam-A.clans.
 # Detect and classify BGCs in mySequence.fa using the DeepBGCpred detector with sliding window strategy
 $ python main.py pipeline mySequence.fa --pcfile --pfam-clain-file Pfam-A.clans.tsv --detector myDetector.pkl --classifier myClassifier.pkl --sliding-window -sw_width 256 -sw_steps 20
 
+# Detect and classify BGCs in mySequence.fa using the DeepBGCpred detector with sliding window strategy and dual-model serial screening
+$ python main.py pipeline mySequence.fa --pcfile --pfam-clain-file Pfam-A.clans.tsv --detector myDetector.pkl --classifier myClassifier.pkl --sliding-window -sw_width 256 -sw_steps 20 --screening
+
 # If you want to detect and classify BGCs in mySequence.fa using the DeepBGC detector, please add a parameters -i
 $ python main.py pipeline mySequence.fa -i 102 --detector myDetector.pkl --classifier myClassifier.pkl
 ```
@@ -259,7 +262,7 @@ This will produce a mySequence directory with multiple files and a README.txt wi
 
 Example output:
 
-![](https://github.com/yangziyi1990/Deep-BGCpred/blob/main/images/Figure2_genome.png)
+![](/Users/yangziyi/Documents/Github/Deep-BGCpred/images/Figure2_genome.png)
 
 
 
