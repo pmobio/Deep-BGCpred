@@ -1,10 +1,8 @@
 # Deep-BGCpred: A unified deep learning genome-mining framework for biosynthetic gene cluster prediction
 
-Deep-BGCpred, a framework that effectively addresses the aforementioned issue by improving a deep learning model
-termed DeepBGC. The new model embeds multi-source protein family domains and employs a stacked Bidirectional
-Long Short-Term Memory model to boost accuracy for BGC identifications. In particular, it integrates two customized
-strategies, sliding window strategy and dual-model serial screening, to improve the model’s performance stability and
-reduce the number of false positive in BGC predictions.
+Deep-BGCpred, a framework that effectively addresses the aforementioned issue by improving a deep learning model termed DeepBGC. The new model embeds multi-source protein family domains and employs a stacked Bidirectional Long Short-Term Memory model to boost accuracy for BGC identifications. In particular, it integrates two customized strategies, sliding window strategy and dual-model serial screening, to improve the model’s performance stability and reduce the number of false positive in BGC predictions.
+
+
 
 ![](https://github.com/yangziyi1990/Deep-BGCpred/blob/main/images/Figure1_pipeline.png)
 
