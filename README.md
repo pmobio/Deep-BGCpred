@@ -229,7 +229,7 @@ $ python main.py train --help
 $ python main.py train --model deepbgcpred.json --output MyDeepBGCpredDetector.pkl BGCs.pfam.tsv negatives.pfam.tsv
 
 # If you are training a DeepBGC detector, you need to add the parameter -i
-$ python main.py train --model deepbgc.json -i 102 --outputIf  MyDeepBGCpredDetector.pkl BGCs.pfam.tsv negatives.pfam.tsv
+$ python main.py train --model deepbgc.json -i 102 --output MyDeepBGCpredDetector.pkl BGCs.pfam.tsv negatives.pfam.tsv
 
 # Train a BGC classifier using a TSV classes file and a set of BGC samples in Pfam TSV format and save the trained classifier to a file.
 $ python main.py train --model random_forest.json --output MyDeepBGCpredClassifier.pkl --classes BGCs.classes.csv BGCs.pfam.tsv
