@@ -131,7 +131,7 @@ In the Deep-BGCpred model, we achived three functions for the training data prep
 
 ### BGC prediction and classification
 
-#### Check your training dataset
+#### 1. Check your training dataset
 
 Prepare the training dataset to train the models for BGC prediction and classification.  Training and validation data can be found in `/data`
 
@@ -144,7 +144,7 @@ Prepare the training dataset to train the models for BGC prediction and classifi
 - Pfam-Pfam interaction file. Record the intercation information of Pfam-Pfam interaction (PPI).  https://github.com/pmobio/Deep-BGCpred/releases/v0.1.0/release.
 - JSON configuration files: See JSON section below.
 
-#### JSON configuration file
+#### 2. JSON configuration file
 
 Deep-BGCpred is using JSON template files to define model architecture and training parameters, which is the same with DeepBGC
 
@@ -216,7 +216,7 @@ JSON template for Random Forest classifier is structured as follows, which is th
 
 
 
-#### Train the BGC prediction and classification models
+#### 3. Train the BGC prediction and classification models
 
 Before predict the BGCs and classify the class of BGCs, you need to trian your own BGC detector and classifier.
 
@@ -236,7 +236,7 @@ $ python main.py train --model random_forest.json --output MyDeepBGCpredClassifi
 
 
 
-#### BGC prediction and classification
+#### 4. BGC prediction and classification
 
 In this step, the proteins and Pfam domains are detected automatically if not already annotated (the same with the work in [1] using HMMER and Prodigal).
 
