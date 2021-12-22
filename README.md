@@ -4,7 +4,7 @@ Deep-BGCpred, a framework that effectively addresses the aforementioned issue by
 
 
 
-![](/Users/yangziyi/Documents/Github/Deep-BGCpred/images/Figure1_pipeline.png)
+![](https://github.com/yangziyi1990/Deep-BGCpred/blob/main/images/Figure1_pipeline.png)
 
 If you find this code useful in your research, then please cite:
 
@@ -262,7 +262,7 @@ This will produce a mySequence directory with multiple files and a README.txt wi
 
 Example output:
 
-![](/Users/yangziyi/Documents/Github/Deep-BGCpred/images/Figure2_genome.png)
+![](https://github.com/yangziyi1990/Deep-BGCpred/blob/main/images/Figure2_genome.png)
 
 
 
