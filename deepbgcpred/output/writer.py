@@ -1,6 +1,4 @@
-
 class OutputWriter(object):
-
     def __init__(self, out_path):
         self.out_path = out_path
 
@@ -20,7 +18,6 @@ class OutputWriter(object):
 
 
 class TSVWriter(OutputWriter):
-
     def __init__(self, out_path):
         super(TSVWriter, self).__init__(out_path)
         self.written = False
@@ -34,11 +31,11 @@ class TSVWriter(OutputWriter):
             return
 
         if self.written:
-            mode = 'a'
+            mode = "a"
             header = False
         else:
-            mode = 'w'
+            mode = "w"
             header = True
 
-        df.to_csv(self.out_path, mode=mode, header=header, index=False, sep='\t')
+        df.to_csv(self.out_path, mode=mode, header=header, index=False, sep="\t")
         self.written = True

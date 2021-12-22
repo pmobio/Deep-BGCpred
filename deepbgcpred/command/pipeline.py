@@ -6,11 +6,10 @@ from __future__ import (
 
 import logging
 
-import deepbgcpred.util
 from deepbgcpred.command.base import BaseCommand
 import os
 from deepbgcpred import util
-from Bio import SeqIO
+import pandas as pd
 
 from deepbgcpred.output.bgc_genbank import BGCGenbankWriter
 from deepbgcpred.output.evaluation.pr_plot import PrecisionRecallPlotWriter
@@ -28,7 +27,7 @@ from deepbgcpred.output.antismash_json import AntismashJSONWriter
 
 
 class PipelineCommand(BaseCommand):
-    command = 'pipeline'
+    command = "pipeline"
 
     help = """Run DeepBGCpred pipeline: Preparation, BGC detection, BGC classification and generate the report directory.
     
@@ -53,68 +52,213 @@ Examples:
   deepbgcpred pipeline --continue --output sequence/ --label deepbgcpred --score 0.9 sequence/sequence.full.gbk
   """
 
-    LOG_FILENAME = 'LOG.txt'
-    PLOT_DIRNAME = 'evaluation'
-    TMP_DIRNAME = 'tmp'
+    LOG_FILENAME = "LOG.txt"
+    PLOT_DIRNAME = "evaluation"
+    TMP_DIRNAME = "tmp"
 
     def add_arguments(self, parser):
 
-        parser.add_argument(dest='inputs', nargs='+', help="Input sequence file path (FASTA, GenBank, Pfam CSV)")
+        parser.add_argument(
+            dest="inputs",
+            nargs="+",
+            help="Input sequence file path (FASTA, GenBank, Pfam CSV)",
+        )
 
-        parser.add_argument('-o', '--output', required=False, help="Custom output directory path")
-        parser.add_argument('--limit-to-record', action='append', help="Process only specific record ID. Can be provided multiple times")
-        parser.add_argument('--minimal-output', dest='is_minimal_output', action='store_true', default=False,
-                            help="Produce minimal output with just the GenBank sequence file")
-        parser.add_argument('--prodigal-meta-mode', action='store_true', default=False, help="Run Prodigal in '-p meta' mode to enable detecting genes in short contigs")
-        parser.add_argument('--protein', action='store_true', default=False, help="Accept amino-acid protein sequences as input (experimental). Will treat each file as a single record with multiple proteins.")
-        parser.add_argument('--pfam-clain-file', help='Pfam clain annotation information file.')
-        parser.add_argument('--pcfile', action='store_true', help='Accept Pfam clain annotation information file as input.')
+        parser.add_argument(
+            "-o", "--output", required=False, help="Custom output directory path"
+        )
+        parser.add_argument(
+            "--limit-to-record",
+            action="append",
+            help="Process only specific record ID. Can be provided multiple times",
+        )
+        parser.add_argument(
+            "--minimal-output",
+            dest="is_minimal_output",
+            action="store_true",
+            default=False,
+            help="Produce minimal output with just the GenBank sequence file",
+        )
+        parser.add_argument(
+            "--prodigal-meta-mode",
+            action="store_true",
+            default=False,
+            help="Run Prodigal in '-p meta' mode to enable detecting genes in short contigs",
+        )
+        parser.add_argument(
+            "--protein",
+            action="store_true",
+            default=False,
+            help="Accept amino-acid protein sequences as input (experimental). Will treat each file as a single record with multiple proteins.",
+        )
+        parser.add_argument(
+            "--pfam-clain-file", help="Pfam clain annotation information file."
+        )
+        parser.add_argument(
+            "--pcfile",
+            action="store_true",
+            help="Accept Pfam clain annotation information file as input.",
+        )
 
-        group = parser.add_argument_group('BGC detection options', '')
+        group = parser.add_argument_group("BGC detection options", "")
         no_models_message = 'run "deepbgcpred download" to download models'
-        detector_names = util.get_available_models('detector')
-        group.add_argument('-d', '--detector', dest='detectors', action='append', default=[],
-                           help="Trained detection model name ({}) or path to trained model pickle file. "
-                                "Can be provided multiple times (-d first -d second)".format(', '.join(detector_names) or no_models_message))
-        group.add_argument('--no-detector', action='store_true', help="Disable BGC detection")
-        group.add_argument('-l', '--label', dest='labels', action='append', default=[], help="Label for detected clusters (equal to --detector by default). "
-                                                                                             "If multiple detectors are provided, a label should be provided for each one")
-        group.add_argument('-s', '--score', default=0.5, type=float,
-                            help="Average protein-wise DeepBGCpred score threshold for extracting BGC regions from Pfam sequences (default: %(default)s)")
-        group.add_argument('-w', '--sliding-window', action='store_true', help='Adopt sliding window strategy')
-        group.add_argument('-sw_width', type=int, default=256, help='width of sliding window')
-        group.add_argument('-sw_steps', type=int, default=20, help='step length of sliding window')
-        group.add_argument('-i', '--input-size', nargs='+', type=int, default=[102, 64, 64],
-                            help="list type, [102, 64, 64] for Deep-BGCpred, [102] for DeepBGC")
-        group.add_argument('--merge-max-protein-gap', default=0, type=int, help="Merge detected BGCs within given number of proteins (default: %(default)s)")
-        group.add_argument('--merge-max-nucl-gap', default=0, type=int, help="Merge detected BGCs within given number of nucleotides (default: %(default)s)")
-        group.add_argument('--min-nucl', default=1, type=int, help="Minimum BGC nucleotide length (default: %(default)s)")
-        group.add_argument('--min-proteins', default=1, type=int, help="Minimum number of proteins in a BGC (default: %(default)s)")
-        group.add_argument('--min-domains', default=1, type=int, help="Minimum number of protein domains in a BGC (default: %(default)s)")
-        group.add_argument('--min-bio-domains', default=0, type=int, help="Minimum number of known biosynthetic (as defined by antiSMASH) protein domains in a BGC (default: %(default)s)")
+        detector_names = util.get_available_models("detector")
+        group.add_argument(
+            "-d",
+            "--detector",
+            dest="detectors",
+            action="append",
+            default=[],
+            help="Trained detection model name ({}) or path to trained model pickle file. "
+            "Can be provided multiple times (-d first -d second)".format(
+                ", ".join(detector_names) or no_models_message
+            ),
+        )
+        group.add_argument(
+            "--no-detector", action="store_true", help="Disable BGC detection"
+        )
+        group.add_argument(
+            "-l",
+            "--label",
+            dest="labels",
+            action="append",
+            default=[],
+            help="Label for detected clusters (equal to --detector by default). "
+            "If multiple detectors are provided, a label should be provided for each one",
+        )
+        group.add_argument(
+            "-s",
+            "--score",
+            default=0.5,
+            type=float,
+            help="Average protein-wise DeepBGCpred score threshold for extracting BGC regions from Pfam sequences (default: %(default)s)",
+        )
+        group.add_argument(
+            "-w",
+            "--sliding-window",
+            action="store_true",
+            help="Adopt sliding window strategy",
+        )
+        group.add_argument(
+            "-sw_width", type=int, default=256, help="width of sliding window"
+        )
+        group.add_argument(
+            "-sw_steps", type=int, default=20, help="step length of sliding window"
+        )
+        group.add_argument(
+            "-i",
+            "--input-size",
+            nargs="+",
+            type=int,
+            default=[102, 64, 64],
+            help="list type, [102, 64, 64] for Deep-BGCpred, [102] for DeepBGC",
+        )
+        group.add_argument(
+            "--merge-max-protein-gap",
+            default=0,
+            type=int,
+            help="Merge detected BGCs within given number of proteins (default: %(default)s)",
+        )
+        group.add_argument(
+            "--merge-max-nucl-gap",
+            default=0,
+            type=int,
+            help="Merge detected BGCs within given number of nucleotides (default: %(default)s)",
+        )
+        group.add_argument(
+            "--min-nucl",
+            default=1,
+            type=int,
+            help="Minimum BGC nucleotide length (default: %(default)s)",
+        )
+        group.add_argument(
+            "--min-proteins",
+            default=1,
+            type=int,
+            help="Minimum number of proteins in a BGC (default: %(default)s)",
+        )
+        group.add_argument(
+            "--min-domains",
+            default=1,
+            type=int,
+            help="Minimum number of protein domains in a BGC (default: %(default)s)",
+        )
+        group.add_argument(
+            "--min-bio-domains",
+            default=0,
+            type=int,
+            help="Minimum number of known biosynthetic (as defined by antiSMASH) protein domains in a BGC (default: %(default)s)",
+        )
 
-        group = parser.add_argument_group('BGC classification options', '')
-        classifier_names = util.get_available_models('classifier')
-        group.add_argument('-c', '--classifier', dest='classifiers', action='append', default=[],
-                            help="Trained classification model name ({}) or path to trained model pickle file. "
-                                 "Can be provided multiple times (-c first -c second)".format(', '.join(classifier_names) or no_models_message))
-        group.add_argument('--no-classifier', action='store_true', help="Disable BGC classification")
-        group.add_argument('--classifier-score', default=0.5, type=float,
-                            help="DeepBGCpred classification score threshold for assigning classes to BGCs (default: %(default)s)")
+        group = parser.add_argument_group("BGC classification options", "")
+        classifier_names = util.get_available_models("classifier")
+        group.add_argument(
+            "-c",
+            "--classifier",
+            dest="classifiers",
+            action="append",
+            default=[],
+            help="Trained classification model name ({}) or path to trained model pickle file. "
+            "Can be provided multiple times (-c first -c second)".format(
+                ", ".join(classifier_names) or no_models_message
+            ),
+        )
+        group.add_argument(
+            "--no-classifier", action="store_true", help="Disable BGC classification"
+        )
+        group.add_argument(
+            "--classifier-score",
+            default=0.5,
+            type=float,
+            help="DeepBGCpred classification score threshold for assigning classes to BGCs (default: %(default)s)",
+        )
 
-    def run(self, inputs, output, detectors, no_detector, labels, classifiers, no_classifier,
-            is_minimal_output, limit_to_record, score, classifier_score, merge_max_protein_gap, merge_max_nucl_gap, min_nucl,
-            min_proteins, min_domains, min_bio_domains, prodigal_meta_mode, protein, pfam_clain_file, input_size, sliding_window,
-            sw_width, sw_steps, pcfile):
+        group = parser.add_argument_group("The dual-model serial screening")
+        group.add_argument(
+            "-scr",
+            "--screening",
+            action="store_true",
+            help="True for the dual-model serial screening",
+        )
+
+    def run(
+        self,
+        inputs,
+        output,
+        detectors,
+        no_detector,
+        labels,
+        classifiers,
+        no_classifier,
+        is_minimal_output,
+        limit_to_record,
+        score,
+        classifier_score,
+        merge_max_protein_gap,
+        merge_max_nucl_gap,
+        min_nucl,
+        min_proteins,
+        min_domains,
+        min_bio_domains,
+        prodigal_meta_mode,
+        protein,
+        pfam_clain_file,
+        input_size,
+        sliding_window,
+        sw_width,
+        sw_steps,
+        pcfile,
+        screening,
+    ):
         if not detectors:
-            detectors = ['deepbgcpred']
+            detectors = ["deepbgcpred"]
 
         if pcfile:
             if not pfam_clain_file:
-                raise ValueError('Please input the Pfam Clain annotation file...')
+                raise ValueError("Please input the Pfam Clain annotation file...")
 
         if not classifiers:
-            classifiers = ['product_class', 'product_activity']
+            classifiers = ["product_class", "product_activity"]
         if not output:
             # if not specified, set output path to name of first input file without extension
             output, _ = os.path.splitext(os.path.basename(os.path.normpath(inputs[0])))
@@ -123,7 +267,7 @@ Examples:
             os.mkdir(output)
 
         # Save log to LOG.txt file
-        logger = logging.getLogger('')
+        logger = logging.getLogger("")
         logger.addHandler(logging.FileHandler(os.path.join(output, self.LOG_FILENAME)))
 
         # Define report dir paths
@@ -132,53 +276,113 @@ Examples:
         output_file_name = os.path.basename(os.path.normpath(output))
 
         steps = []
-        steps.append(DeepBGCpredAnnotator(tmp_dir_path=tmp_path, prodigal_meta_mode=prodigal_meta_mode))
+        steps.append(
+            DeepBGCpredAnnotator(
+                tmp_dir_path=tmp_path, prodigal_meta_mode=prodigal_meta_mode
+            )
+        )
 
         if not no_detector:
             if not labels:
                 labels = [None] * len(detectors)
             elif len(labels) != len(detectors):
-                raise ValueError('A separate label should be provided for each of the detectors: {}'.format(detectors))
+                raise ValueError(
+                    "A separate label should be provided for each of the detectors: {}".format(
+                        detectors
+                    )
+                )
 
             for detector, label in zip(detectors, labels):
-                steps.append(DeepBGCpredDetector(
-                    detector=detector,
-                    pfamfile=pfam_clain_file,
-                    input_size=input_size,
-                    sliding_window=sliding_window,
-                    sw_width=sw_width,
-                    sw_steps=sw_steps,
-                    label=label,
-                    pcfile=pcfile,
-                    score_threshold=score,
-                    merge_max_protein_gap=merge_max_protein_gap,
-                    merge_max_nucl_gap=merge_max_nucl_gap,
-                    min_nucl=min_nucl,
-                    min_proteins=min_proteins,
-                    min_domains=min_domains,
-                    min_bio_domains=min_bio_domains
-                ))
+                steps.append(
+                    DeepBGCpredDetector(
+                        detector=detector,
+                        pfamfile=pfam_clain_file,
+                        input_size=input_size,
+                        sliding_window=sliding_window,
+                        sw_width=sw_width,
+                        sw_steps=sw_steps,
+                        label=label,
+                        pcfile=pcfile,
+                        score_threshold=score,
+                        merge_max_protein_gap=merge_max_protein_gap,
+                        merge_max_nucl_gap=merge_max_nucl_gap,
+                        min_nucl=min_nucl,
+                        min_proteins=min_proteins,
+                        min_domains=min_domains,
+                        min_bio_domains=min_bio_domains,
+                    )
+                )
 
         writers = []
-        writers.append(GenbankWriter(out_path=os.path.join(output, output_file_name+'.full.gbk')))
-        writers.append(AntismashJSONWriter(out_path=os.path.join(output, output_file_name + '.antismash.json')))
+        writers.append(
+            GenbankWriter(out_path=os.path.join(output, output_file_name + ".full.gbk"))
+        )
+        writers.append(
+            AntismashJSONWriter(
+                out_path=os.path.join(output, output_file_name + ".antismash.json")
+            )
+        )
         is_evaluation = False
         if not is_minimal_output:
-            writers.append(BGCGenbankWriter(out_path=os.path.join(output, output_file_name+'.bgc.gbk')))
-            writers.append(ClusterTSVWriter(out_path=os.path.join(output, output_file_name+'.bgc.tsv')))
-            writers.append(PfamTSVWriter(out_path=os.path.join(output, output_file_name+'.pfam.tsv')))
+            writers.append(
+                BGCGenbankWriter(
+                    out_path=os.path.join(output, output_file_name + ".bgc.gbk")
+                )
+            )
+            writers.append(
+                ClusterTSVWriter(
+                    out_path=os.path.join(output, output_file_name + ".bgc.tsv")
+                )
+            )
+            writers.append(
+                PfamTSVWriter(
+                    out_path=os.path.join(output, output_file_name + ".pfam.tsv")
+                )
+            )
 
             is_evaluation = True
-            writers.append(PfamScorePlotWriter(out_path=os.path.join(evaluation_path, output_file_name + '.score.png')))
-            writers.append(BGCRegionPlotWriter(out_path=os.path.join(evaluation_path, output_file_name+'.bgc.png')))
-            writers.append(ROCPlotWriter(out_path=os.path.join(evaluation_path, output_file_name+'.roc.png')))
-            writers.append(PrecisionRecallPlotWriter(out_path=os.path.join(evaluation_path, output_file_name+'.pr.png')))
+            writers.append(
+                PfamScorePlotWriter(
+                    out_path=os.path.join(
+                        evaluation_path, output_file_name + ".score.png"
+                    )
+                )
+            )
+            writers.append(
+                BGCRegionPlotWriter(
+                    out_path=os.path.join(
+                        evaluation_path, output_file_name + ".bgc.png"
+                    )
+                )
+            )
+            writers.append(
+                ROCPlotWriter(
+                    out_path=os.path.join(
+                        evaluation_path, output_file_name + ".roc.png"
+                    )
+                )
+            )
+            writers.append(
+                PrecisionRecallPlotWriter(
+                    out_path=os.path.join(evaluation_path, output_file_name + ".pr.png")
+                )
+            )
 
-        writers.append(ReadmeWriter(out_path=os.path.join(output, 'README.txt'), root_path=output, writers=writers))
+        writers.append(
+            ReadmeWriter(
+                out_path=os.path.join(output, "README.txt"),
+                root_path=output,
+                writers=writers,
+            )
+        )
 
         if not no_classifier:
             for classifier in classifiers:
-                steps.append(DeepBGCpredClassifier(classifier=classifier, score_threshold=classifier_score))
+                steps.append(
+                    DeepBGCpredClassifier(
+                        classifier=classifier, score_threshold=classifier_score
+                    )
+                )
 
         # Create temp and evaluation dir
         if not os.path.exists(tmp_path):
@@ -189,29 +393,113 @@ Examples:
 
         record_idx = 0
         for i, input_path in enumerate(inputs):
-            logging.info('Processing input file %s/%s: %s', i+1, len(inputs), input_path)
+            logging.info(
+                "Processing input file %s/%s: %s", i + 1, len(inputs), input_path
+            )
             with util.SequenceParser(input_path, protein=protein) as parser:
                 for record in parser.parse():
                     if limit_to_record and record.id not in limit_to_record:
-                        logging.debug('Skipping record %s not matching filter %s', record.id, limit_to_record)
+                        logging.debug(
+                            "Skipping record %s not matching filter %s",
+                            record.id,
+                            limit_to_record,
+                        )
                         continue
 
                     record_idx += 1
-                    logging.info('='*80)
-                    logging.info('Processing record #%s: %s', record_idx, record.id)
+                    logging.info("=" * 80)
+                    logging.info("Processing record #%s: %s", record_idx, record.id)
                     for step in steps:
                         step.run(record)
 
-                    logging.info('Saving processed record %s', record.id)
+                    logging.info("Saving processed record %s", record.id)
                     for writer in writers:
                         writer.write(record)
 
-        logging.info('=' * 80)
+        logging.info("=" * 80)
         for step in steps:
             step.print_summary()
 
         for writer in writers:
             writer.close()
 
-        logging.info('='*80)
-        logging.info('Saved DeepBGCpred result to: {}'.format(output))
+        logging.info("=" * 80)
+        logging.info("Saved DeepBGCpred result to: {}".format(output))
+
+        # The dual-model serial screening
+        if screening:
+            # check each detector and classifier for the dual-model serial screening.
+
+            if not os.path.exists(os.path.join(output, "screen")):
+                os.mkdir(os.path.join(output, "screen"))
+
+            for detector, classifier in zip(detectors, classifiers):
+                # load the pfam and class file
+                prefix_name = output.split("/")[-1]
+                pfam_bgc = pd.read_csv(
+                    os.path.join(output, prefix_name + ".pfam.tsv"), sep="\t"
+                )
+                class_bgc = pd.read_csv(
+                    os.path.join(output, prefix_name + ".bgc.tsv"), sep="\t"
+                )
+                pfam_old = pd.read_csv(
+                    os.path.join(output, prefix_name + ".pfam_output.tsv"), sep="\t"
+                )
+
+                # select detector information from the full table
+                detector = detector.split("/")[-1].split(".")[0]
+                classifier = classifier.split("/")[-1].split(".")[0]
+                model_bgc = class_bgc.loc[
+                    class_bgc["detector"] == detector
+                ].reset_index(drop=True)
+                model_sub_bgc = model_bgc.loc[
+                    model_bgc[classifier] == "Non_BGC"
+                ].reset_index(drop=True)
+                class_sub_bgc = class_bgc.loc[
+                    class_bgc[detector + "_score"] == "Non_BGC"
+                ].reset_index(drop=True)
+
+                model_concat_bgc = pd.concat(
+                    [model_sub_bgc, class_sub_bgc]
+                ).reset_index(drop=True)
+
+                for i in range(model_concat_bgc.shape[0]):
+                    nucl_start = model_concat_bgc["nucl_start"][i]
+                    nucl_end = model_concat_bgc["nucl_end"][i]
+                    sequence_id = model_concat_bgc["sequence_id"][i]
+                    pfam_sub_bgc = pfam_bgc[
+                        (pfam_bgc["gene_start"] >= nucl_start)
+                        & (pfam_bgc["gene_end"] <= nucl_end)
+                    ]
+                    pfam_sub_idx = pfam_sub_bgc[
+                        pfam_sub_bgc["sequence_id"] == sequence_id
+                    ].index
+                    pfam_bgc.loc[pfam_sub_idx, detector + "_score"] = 0
+
+                pfam_old = pfam_old.drop([detector], axis=1)
+                pfam_new = pd.concat([pfam_old, pfam_bgc[detector + "_score"]], axis=1)
+                pfam_new = pfam_new.rename(columns={detector + "_score": detector})
+
+                class_bgc_s = class_bgc[class_bgc["detector"] == detector].reset_index(
+                    drop=True
+                )
+                class_bgc_s = class_bgc_s.drop(
+                    class_bgc_s[class_bgc_s[classifier] == "Non_BGC"].index
+                )
+
+                pfam_new.to_csv(
+                    os.path.join(
+                        output,
+                        "Screen/" + detector + "_" + classifier + ".pfam_filter.tsv",
+                    ),
+                    index=None,
+                    sep="\t",
+                )
+                class_bgc_s.to_csv(
+                    os.path.join(
+                        output,
+                        "Screen/" + detector + "_" + classifier + ".bgc_filter.tsv",
+                    ),
+                    index=None,
+                    sep="\t",
+                )

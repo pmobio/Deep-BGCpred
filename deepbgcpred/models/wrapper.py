@@ -24,6 +24,7 @@ class SequenceModelWrapper(BaseEstimator, ClassifierMixin):
     """
     Wrapper for a sequence detection/classification model than handles feature transformation and loading model definitions from JSON
     """
+
     def __init__(self, transformer, model, fit_params):
         """
 
@@ -37,7 +38,9 @@ class SequenceModelWrapper(BaseEstimator, ClassifierMixin):
         self.version = __version__
         self.timestamp = time.time()
 
-    def fit(self, samples, y, validation_samples=None, validation_y=None, **extra_fit_params):
+    def fit(
+        self, samples, y, validation_samples=None, validation_y=None, **extra_fit_params
+    ):
         """
         Train model with given list of samples, observe performance on given validation samples.
         Domain DataFrames are converted to feature matrices using the pipeline's feature transformer.
@@ -66,49 +69,74 @@ class SequenceModelWrapper(BaseEstimator, ClassifierMixin):
         merged_params = self.fit_params.copy()
         merged_params.update(extra_fit_params)
 
-        return self.model.fit(train_X_list, y, validation_X_list=validation_X_list, validation_y_list=validation_y, **merged_params)
+        return self.model.fit(
+            train_X_list,
+            y,
+            validation_X_list=validation_X_list,
+            validation_y_list=validation_y,
+            **merged_params
+        )
 
     def _check_samples(self, samples):
         # Wrap single sample into list
         if isinstance(samples, pd.DataFrame):
             samples = [samples]
         elif not isinstance(samples, list):
-            raise TypeError('Expected single sample or list of samples, got {}'.format(type(samples)))
+            raise TypeError(
+                "Expected single sample or list of samples, got {}".format(
+                    type(samples)
+                )
+            )
         for sequence in samples:
             if not isinstance(sequence, pd.DataFrame):
-                raise TypeError('Sample has to be a DataFrame, got ' + str(type(sequence)))
+                raise TypeError(
+                    "Sample has to be a DataFrame, got " + str(type(sequence))
+                )
 
     def _debug_samples(self, X_list, y=None):
         if isinstance(X_list, pd.DataFrame):
-            logging.debug('-'*80)
-            logging.debug('Preview of sequence vectors X:\n%s', X_list.head(5))
-            logging.debug('-'*80)
+            logging.debug("-" * 80)
+            logging.debug("Preview of sequence vectors X:\n%s", X_list.head(5))
+            logging.debug("-" * 80)
             if y is not None:
-                logging.debug('Preview of response vectors y:\n%s', y.head(5))
-                logging.debug('-'*80)
+                logging.debug("Preview of response vectors y:\n%s", y.head(5))
+                logging.debug("-" * 80)
         elif isinstance(X_list, list) and X_list:
-            logging.debug('-'*80)
-            logging.debug('Preview of first sequence X:\n%s', X_list[0].head(5))
-            logging.debug('-'*80)
+            logging.debug("-" * 80)
+            logging.debug("Preview of first sequence X:\n%s", X_list[0].head(5))
+            logging.debug("-" * 80)
             if y is None:
                 pass
             elif isinstance(y, pd.DataFrame):
-                logging.debug('Preview of response vectors y:\n%s', y.head())
-                logging.debug('-'*80)
+                logging.debug("Preview of response vectors y:\n%s", y.head())
+                logging.debug("-" * 80)
             else:
-                logging.debug('Preview of first sequence y:\n%s', y[0].head())
-                logging.debug('-'*80)
+                logging.debug("Preview of first sequence y:\n%s", y[0].head())
+                logging.debug("-" * 80)
 
     def _safe_transform(self, samples, y):
         X_list = self.transformer.transform(samples)
         if isinstance(X_list, pd.DataFrame) and not X_list.empty:
             if not isinstance(y, pd.DataFrame):
-                raise ValueError('In single vector sequence mode, the response needs to be a DataFrame with one row for each sample')
+                raise ValueError(
+                    "In single vector sequence mode, the response needs to be a DataFrame with one row for each sample"
+                )
             if len(X_list.index) != len(y.index):
-                raise ValueError('Index length does not match for sample vectors ({}) and responses ({})'.format(len(X_list.index), len(y.index)))
+                raise ValueError(
+                    "Index length does not match for sample vectors ({}) and responses ({})".format(
+                        len(X_list.index), len(y.index)
+                    )
+                )
         return X_list
 
-    def predict(self, samples, input_size=[102, 64, 64], sliding_window=True, sw_width=256, sw_steps=20):
+    def predict(
+        self,
+        samples,
+        input_size=[102, 64, 64],
+        sliding_window=True,
+        sw_width=256,
+        sw_steps=20,
+    ):
         """
         Return prediction scores for each sequence in list.
         In detection, will return list of numpy arrays with prediction score for each sequence element (e.g. protein domain).
@@ -118,11 +146,18 @@ class SequenceModelWrapper(BaseEstimator, ClassifierMixin):
         """
         X_list = self.transformer.transform(samples)
 
-        if self.model.__class__.__name__ == 'KerasRNN':
+        if self.model.__class__.__name__ == "KerasRNN":
             self._debug_samples(X_list)
             if isinstance(X_list, list):
-                return [self.model.predict(X, input_size, sliding_window, sw_width, sw_steps) for X in X_list]
-            return self.model.predict(X_list, input_size, sliding_window, sw_width, sw_steps)
+                return [
+                    self.model.predict(
+                        X, input_size, sliding_window, sw_width, sw_steps
+                    )
+                    for X in X_list
+                ]
+            return self.model.predict(
+                X_list, input_size, sliding_window, sw_width, sw_steps
+            )
         else:
             self._debug_samples(X_list)
             if isinstance(X_list, list):
@@ -145,20 +180,22 @@ class SequenceModelWrapper(BaseEstimator, ClassifierMixin):
         elif isinstance(config, dict):
             pass
         else:
-            raise AttributeError('Invalid config type "{}": {}'.format(type(config), config))
+            raise AttributeError(
+                'Invalid config type "{}": {}'.format(type(config), config)
+            )
 
         config = fill_vars(config, vars)
 
-        logging.info('Loaded model:')
+        logging.info("Loaded model:")
         logging.info(pprint.pformat(config, indent=4))
 
-        build_params = config.get('build_params', {})
-        fit_params = config.get('fit_params', {})
-        input_params = config.get('input_params', {})
-        sequence_as_vector = input_params.get('sequence_as_vector', False)
+        build_params = config.get("build_params", {})
+        fit_params = config.get("fit_params", {})
+        input_params = config.get("input_params", {})
+        sequence_as_vector = input_params.get("sequence_as_vector", False)
 
         # Get class from "models" module. Don't forget to import the class in models.__init__ first!
-        clf_class = getattr(models, config.get('type'))
+        clf_class = getattr(models, config.get("type"))
 
         # Create a new model instance
         model = clf_class(**build_params)
@@ -166,40 +203,51 @@ class SequenceModelWrapper(BaseEstimator, ClassifierMixin):
         if meta_only:
             transformer = None
         else:
-            feature_params = input_params.get('features', [])
-            transformer = features.ListTransformer.from_config(feature_params, sequence_as_vector=sequence_as_vector)
+            feature_params = input_params.get("features", [])
+            transformer = features.ListTransformer.from_config(
+                feature_params, sequence_as_vector=sequence_as_vector
+            )
 
-        return SequenceModelWrapper(transformer=transformer, model=model, fit_params=fit_params)
+        return SequenceModelWrapper(
+            transformer=transformer, model=model, fit_params=fit_params
+        )
 
     def save(self, path):
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             pickle.dump(self, f, protocol=2)
         return self
 
     @classmethod
     def load(cls, path):
-        logging.info('Loading model from: {}'.format(path))
+        logging.info("Loading model from: {}".format(path))
         try:
             try:
-                with open(path, 'rb') as f:
+                with open(path, "rb") as f:
                     model = pickle.load(f)
             except UnicodeDecodeError:
-                with open(path, 'rb') as f:
-                    model = pickle.load(f, encoding='latin1')
+                with open(path, "rb") as f:
+                    model = pickle.load(f, encoding="latin1")
         except ImportError as e:
-            if 'hmmlearn' in str(e):
+            if "hmmlearn" in str(e):
                 from deepbgcpred.models.hmm import get_hmmlearn_import_error
+
                 raise get_hmmlearn_import_error()
             raise e
         except Exception as e:
             raise ValueError("Error unpickling model from path '{}'".format(path), e)
 
         if not isinstance(model, cls):
-            raise TypeError("Provided model is not a SequenceModelWrapper: '{}' is a {}".format(path, type(model)))
+            raise TypeError(
+                "Provided model is not a SequenceModelWrapper: '{}' is a {}".format(
+                    path, type(model)
+                )
+            )
         return model
 
 
 VAR_PATTERN = re.compile("(#{([a-zA-Z_0-9]+)})")
+
+
 def fill_vars(d, vars):
     if vars is None:
         vars = {}
@@ -215,5 +263,9 @@ def fill_vars(d, vars):
 def _get_matched_var(match, vars):
     name = match.group(2)
     if name not in vars:
-        raise ValueError("Missing config variable {}, specify it using --config {} VALUE".format(name, name))
+        raise ValueError(
+            "Missing config variable {}, specify it using --config {} VALUE".format(
+                name, name
+            )
+        )
     return vars[name]

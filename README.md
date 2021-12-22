@@ -4,9 +4,9 @@ Deep-BGCpred, a framework that effectively addresses the aforementioned issue by
 
 
 
-![](https://github.com/yangziyi1990/Deep-BGCpred/blob/main/images/Figure1_pipeline.png)
+![](/Users/yangziyi/Documents/Github/Deep-BGCpred/images/Figure1_pipeline.png)
 
-If you find this code useful in your research then please cite:
+If you find this code useful in your research, then please cite:
 
 ```
 @article{
@@ -41,7 +41,7 @@ Follow the steps in the defined order to avoid conflicts.
    $ conda deactivate
    ```
 
-3. Install external pacakges:
+3. Install external packages:
 
    - Install HMMER and put it on your PATH: http://hmmer.org/download.html 
 
@@ -64,6 +64,8 @@ Follow the steps in the defined order to avoid conflicts.
    - Install Prodigal and put the prodigal binary it on your PATH: https://github.com/hyattpd/Prodigal/releases
 
      ```
+     $ conda install -c bioconda prodigal
+     # or 
      $ tar -xzvf Prodigal-2.6.3.tar.gz
      $ make install
      ```
@@ -105,7 +107,7 @@ If you want to training the Deep-BGCpred model on you own data, you need to prep
 $ python main.py prepare --help
 ```
 
-In the Deep-BGCpred model, we achived three functions for the training data preparation: 
+In the Deep-BGCpred model, we achieved three functions for the training data preparation: 
 
 1) The training data need to be prepared in Pfam TSV format, which can be prepared from your sequence using:
 
@@ -116,7 +118,7 @@ In the Deep-BGCpred model, we achived three functions for the training data prep
 2) Add the Clan and description information to the Pfam TSV file; 
 
    ```
-   $ python main.py prepare --add --clan-txt pfam34_clans.tsv --prepared-tsv sequence.prepared.tsv --output-new-tsv sequence.prepared.new.tsv
+   $ python main.py prepare --add --clan-txt Pfam-A.clans.tsv --prepared-tsv sequence.prepared.tsv --output-new-tsv sequence.prepared.new.tsv
    ```
 
 3) Data augmentation according to the Pfam TSV file.
@@ -131,15 +133,16 @@ In the Deep-BGCpred model, we achived three functions for the training data prep
 
 #### 1. Check your training dataset
 
-Prepare the training dataset to train the models for BGC prediction and classification.  Training and validation data can be found in `/data`
+Prepare the training dataset to train the models for BGC prediction and classification.  Training and validation data can be found in https://github.com/yangziyi1990/Deep-BGCpred/releases/tag/v0.1.0.
 
 - Positive (BGC) training data provided by DeepBGC [1]. If you want to generate your own BGC training dataset, please see "Prepare the training data" section mentioned above.
 - Negative (Non-BGC) training data. Your can use `GeneSwap_Negatives.pfam.new.tsv` as the negative samples to train the predition model. For the classification stage,  the negative samples are taken from two sources: data generation based on the negative samples released by [1] (2000 samples), and the non-BGC samples incorrectly predicted by Bi-LSTM network in the preceding stage of the training process (102 samples). 
 
 - Validation dataset [1, 2]: Needed for BGC detection. Contigs with annotated BGC and non-BGC regions, see https://github.com/pmobio/Deep-BGCpred/releases/v0.1.0/release.
-- Trained Pfam2vec vectors provied by DeepBGC [1]: "Vocabulary" converting Pfam IDs to meaningful numeric vectors, results from https://github.com/Merck/deepbgc/releases/tag/v0.1.0.
+- Trained Pfam2vec vectors provided by DeepBGC [1]: "Vocabulary" converting Pfam IDs to meaningful numeric vectors, results from https://github.com/Merck/deepbgc/releases/tag/v0.1.0.
 - Annotated Clan and description information: Record the Pfam, Clan and description information. You can see  https://github.com/pmobio/Deep-BGCpred/releases/v0.1.0/release.
-- Pfam-Pfam interaction file. Record the intercation information of Pfam-Pfam interaction (PPI).  https://github.com/pmobio/Deep-BGCpred/releases/v0.1.0/release.
+- Pfam-Pfam interaction file. Record the interaction information of Pfam-Pfam interaction (PPI).  https://github.com/pmobio/Deep-BGCpred/releases/v0.1.0/release.
+- BGC.Classes.csv: Chemical product class used to train the random forest model.
 - JSON configuration files: See JSON section below.
 
 #### 2. JSON configuration file
@@ -216,7 +219,7 @@ JSON template for Random Forest classifier is structured as follows, which is th
 
 #### 3. Train the BGC prediction and classification models
 
-Before predict the BGCs and classify the class of BGCs, you need to trian your own BGC detector and classifier.
+Before predict the BGCs and classify the class of BGCs, you need to train your own BGC detector and classifier.
 
 ```
 # Show train command help docs
@@ -243,10 +246,10 @@ In this step, the proteins and Pfam domains are detected automatically if not al
 $ python main.py pipeline --help
 
 # Detect and classify BGCs in mySequence.fa using the DeepBGCpred detector without sliding window strategy
-$ python main.py pipeline mySequence.fa --pcfile --pfam-clain-file pfam34_clans.tsv --detector myDetector.pkl --classifier myClassifier.pkl 
+$ python main.py pipeline mySequence.fa --pcfile --pfam-clain-file Pfam-A.clans.tsv --detector myDetector.pkl --classifier myClassifier.pkl 
 
 # Detect and classify BGCs in mySequence.fa using the DeepBGCpred detector with sliding window strategy
-$ python main.py pipeline mySequence.fa --pcfile --pfam-clain-file pfam34_clans.tsv --detector myDetector.pkl --classifier myClassifier.pkl --sliding-window -sw_width 256 -sw_steps 20
+$ python main.py pipeline mySequence.fa --pcfile --pfam-clain-file Pfam-A.clans.tsv --detector myDetector.pkl --classifier myClassifier.pkl --sliding-window -sw_width 256 -sw_steps 20
 
 # If you want to detect and classify BGCs in mySequence.fa using the DeepBGC detector, please add a parameters -i
 $ python main.py pipeline mySequence.fa -i 102 --detector myDetector.pkl --classifier myClassifier.pkl
@@ -256,7 +259,7 @@ This will produce a mySequence directory with multiple files and a README.txt wi
 
 Example output:
 
-![](https://github.com/yangziyi1990/Deep-BGCpred/blob/main/images/Figure2_genome.png)
+![](/Users/yangziyi/Documents/Github/Deep-BGCpred/images/Figure2_genome.png)
 
 
 

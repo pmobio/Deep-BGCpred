@@ -1,5 +1,4 @@
 class PipelineStep(object):
-
     def run(self, record):
         raise NotImplementedError()
 

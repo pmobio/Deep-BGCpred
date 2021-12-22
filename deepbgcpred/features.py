@@ -13,6 +13,7 @@ class ListTransformer(BaseEstimator, TransformerMixin):
     """
     Wrapper for other transformers, will transform each DataFrame in a list by each transformer and merge the results.
     """
+
     def __init__(self, transformers, sequence_as_vector=False):
         self.transformers = transformers
         self.sequence_as_vector = sequence_as_vector
@@ -25,7 +26,9 @@ class ListTransformer(BaseEstimator, TransformerMixin):
         if isinstance(samples, pd.DataFrame):
             return self._transform_sequence(samples)
         elif not isinstance(samples, list):
-            raise AttributeError('Sequences have to be a list, got ' + str(type(samples)))
+            raise AttributeError(
+                "Sequences have to be a list, got " + str(type(samples))
+            )
         X_list = [self._transform_sequence(sequence) for sequence in samples]
         if self.sequence_as_vector:
             # Merge list of Series into a single DataFrame indexed by name of each Series (sequence ID)
@@ -35,9 +38,13 @@ class ListTransformer(BaseEstimator, TransformerMixin):
     def _transform_sequence(self, sequence):
         if self.sequence_as_vector:
             # Output of each transformer should be a Series, merge into one long Series
-            return pd.concat([t.transform(sequence) for t in self.transformers], sort=False)
+            return pd.concat(
+                [t.transform(sequence) for t in self.transformers], sort=False
+            )
         # Output of each transformer should be a matrix, merge all columns into one wide matrix
-        return pd.concat([t.transform(sequence) for t in self.transformers], sort=False, axis=1)
+        return pd.concat(
+            [t.transform(sequence) for t in self.transformers], sort=False, axis=1
+        )
 
     def fit(self, X_list, y_list=None):
         if X_list is None:
@@ -45,7 +52,7 @@ class ListTransformer(BaseEstimator, TransformerMixin):
         if isinstance(X_list, pd.Series):
             X_list = list(X_list.values)
         if not isinstance(X_list, list):
-            raise AttributeError('X_list has to be a list, got {}'.format(type(X_list)))
+            raise AttributeError("X_list has to be a list, got {}".format(type(X_list)))
         if len(X_list):
             X_merged = pd.concat(X_list, sort=False)
             y_merged = y_list if isinstance(y_list, pd.DataFrame) else pd.concat(y_list)
@@ -57,9 +64,9 @@ class ListTransformer(BaseEstimator, TransformerMixin):
     def from_config(cls, transformer_configs, sequence_as_vector=False):
         transformers = []
         for params in transformer_configs:
-            classname = params.get('type')
+            classname = params.get("type")
             transformer = getattr(sys.modules[__name__], classname)
-            trans_args = {k: v for k, v in params.items() if k != 'type'}
+            trans_args = {k: v for k, v in params.items() if k != "type"}
             transformers.append(transformer(**trans_args))
         return ListTransformer(transformers, sequence_as_vector=sequence_as_vector)
 
@@ -68,37 +75,51 @@ class Pfam2VecTransformer(BaseEstimator, TransformerMixin):
     """
     Get pfam2vec matrix for a Domain DataFrame
     """
+
     def __init__(self, vector_path):
         self.vector_path = vector_path
-        if vector_path.endswith('.csv'):
-            self.vectors = pd.read_csv(vector_path).set_index('pfam_id')
-        elif vector_path.endswith('.tsv'):
-            self.vectors = pd.read_csv(vector_path, sep='\t').set_index('pfam_id')
-        elif vector_path.endswith('.pkl') or vector_path.endswith('.pickle'):
+        if vector_path.endswith(".csv"):
+            self.vectors = pd.read_csv(vector_path).set_index("pfam_id")
+        elif vector_path.endswith(".tsv"):
+            self.vectors = pd.read_csv(vector_path, sep="\t").set_index("pfam_id")
+        elif vector_path.endswith(".pkl") or vector_path.endswith(".pickle"):
             self.vectors = pd.read_pickle(vector_path)
-        elif vector_path.endswith('.bin'):
+        elif vector_path.endswith(".bin"):
             import word2vec
-            model = word2vec.load(vector_path, kind='bin')
+
+            model = word2vec.load(vector_path, kind="bin")
             self.vectors = pd.DataFrame(model.vectors, index=model.vocab)
         else:
-            raise ValueError("File type {} not supported for Pfam2Vec, use .csv, .pkl, .pickle or .bin".format(vector_path))
+            raise ValueError(
+                "File type {} not supported for Pfam2Vec, use .csv, .pkl, .pickle or .bin".format(
+                    vector_path
+                )
+            )
 
         vectors_min = self.vectors.min()
         too_low_idx = vectors_min < -1
         cols_too_low = list(self.vectors.columns[too_low_idx])
         if cols_too_low:
-            raise ValueError('Pfam2vec vectors should be >= -1, got {} in {}'.format(list(vectors_min[too_low_idx]), cols_too_low))
+            raise ValueError(
+                "Pfam2vec vectors should be >= -1, got {} in {}".format(
+                    list(vectors_min[too_low_idx]), cols_too_low
+                )
+            )
 
         vectors_max = self.vectors.max()
         too_high_idx = vectors_max > 1
         cols_too_high = list(self.vectors.columns[too_high_idx])
         if cols_too_high:
-            raise ValueError('Pfam2vec vectors should be <= 1, got {} in {}'.format(list(vectors_max[too_high_idx]), cols_too_high))
+            raise ValueError(
+                "Pfam2vec vectors should be <= 1, got {} in {}".format(
+                    list(vectors_max[too_high_idx]), cols_too_high
+                )
+            )
 
     def transform(self, X):
         # Turn each pfam ID into a vector
 
-        df = self.vectors.reindex(index=X['pfam_id'], fill_value=0)
+        df = self.vectors.reindex(index=X["pfam_id"], fill_value=0)
         df.index = X.index
         return df
 
@@ -119,12 +140,14 @@ class RandomVecTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         # Turn each pfam ID into a vector
-        return np.array([self.vectors.get(pfam_id, self.zero_vector) for pfam_id in X['pfam_id']])
-        #print(X.iloc[0]['pfam_id'], vectors[0])
-        #return vectors
+        return np.array(
+            [self.vectors.get(pfam_id, self.zero_vector) for pfam_id in X["pfam_id"]]
+        )
+        # print(X.iloc[0]['pfam_id'], vectors[0])
+        # return vectors
 
     def fit(self, X, y=None):
-        for pfam_id in X['pfam_id'].unique():
+        for pfam_id in X["pfam_id"].unique():
             if pfam_id not in self.vectors:
                 self.vectors[pfam_id] = self.random.rand(self.dimensions)
         return self
@@ -143,29 +166,36 @@ class RandomVecTransformerforClan(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         # Turn each clan ID into a vector
-        vectors = pd.DataFrame([self.vectors.get(clan_id, self.zero_vector) for clan_id in X['clan_id']], index=X.index)
+        vectors = pd.DataFrame(
+            [self.vectors.get(clan_id, self.zero_vector) for clan_id in X["clan_id"]],
+            index=X.index,
+        )
         return vectors
 
     def fit(self, X, y=None):
-        for clan_id in X['clan_id'].unique():
+        for clan_id in X["clan_id"].unique():
             if clan_id not in self.vectors:
                 self.vectors[clan_id] = self.random.rand(self.dimensions)
         return self
+
 
 class EmissionProbabilityTransformer(BaseEstimator, TransformerMixin):
     """
     Get emission probability feature column for given Domain DataFrame. Based on HMM emissions.
     """
+
     def __init__(self):
         self.emissions = None
 
     def fit(self, X, y=None):
         unique_y = set(y)
         if unique_y != {0, 1}:
-            raise AttributeError('Invalid target values, expected {0, 1} got ' + str(unique_y))
-        counts = pd.DataFrame(data={}, index=X['pfam_id'].unique())
-        counts['neg'] = X[y == 0]['pfam_id'].value_counts()
-        counts['pos'] = X[y == 1]['pfam_id'].value_counts()
+            raise AttributeError(
+                "Invalid target values, expected {0, 1} got " + str(unique_y)
+            )
+        counts = pd.DataFrame(data={}, index=X["pfam_id"].unique())
+        counts["neg"] = X[y == 0]["pfam_id"].value_counts()
+        counts["pos"] = X[y == 1]["pfam_id"].value_counts()
         counts = counts.fillna(0)
         # Divide each state's emission counts by the total number of observations to get emission frequency
         self.emissions = counts / counts.sum(axis=0)
@@ -173,7 +203,7 @@ class EmissionProbabilityTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         # Turn each pfam ID into a vector
-        vectors = self.emissions.reindex(index=X['pfam_id'], fill_value=0)
+        vectors = self.emissions.reindex(index=X["pfam_id"], fill_value=0)
         return vectors
 
 
@@ -186,15 +216,16 @@ class PositiveProbabilityTransformer(BaseEstimator, TransformerMixin):
     Total probability = probability of seeing given pfam in general,
       which is equivalent to number of occurences divided by total length of input sequence
     """
+
     def __init__(self):
         self.probs = None
 
     def fit(self, X, y=None):
-        vals = pd.DataFrame({'pfam_id': X['pfam_id'], 'y': y})
+        vals = pd.DataFrame({"pfam_id": X["pfam_id"], "y": y})
         negweight = sum(y) / sum(y == 0)
         total_num_weighted = sum(y) + sum(y == 0) * negweight
         probs = {}
-        for pfam_id, pfam_y in vals.groupby('pfam_id')['y']:
+        for pfam_id, pfam_y in vals.groupby("pfam_id")["y"]:
             num_pos = sum(pfam_y)
             num_neg = sum(pfam_y == 0)
             num_weighted = num_pos + num_neg * negweight
@@ -207,7 +238,7 @@ class PositiveProbabilityTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         # Turn each pfam ID into a vector
-        vectors = self.probs.reindex(index=X['pfam_id'], fill_value=0)
+        vectors = self.probs.reindex(index=X["pfam_id"], fill_value=0)
         return vectors
 
 
@@ -216,14 +247,17 @@ class OneHotEncodingTransformer(BaseEstimator, TransformerMixin):
     Create a binary one-hot-encoding vector from Domain CSV files.
     If sequence_as_vector = True, will produce a set-encoding vector of the whole sequence. Otherwise will create one vector per each Pfam domain.
     """
-    def __init__(self, column='pfam_id', sequence_as_vector=True):
+
+    def __init__(self, column="pfam_id", sequence_as_vector=True):
         self.unique_values = []
         self.column = column
         self.sequence_as_vector = sequence_as_vector
 
     def transform(self, X):
         # Turn each pfam ID into a vector
-        values = pd.get_dummies(X[self.column]).reindex(columns=self.unique_values, fill_value=0)
+        values = pd.get_dummies(X[self.column]).reindex(
+            columns=self.unique_values, fill_value=0
+        )
         if self.sequence_as_vector:
             return pd.Series(values.sum().astype(np.bool).astype(np.int))
         return values
@@ -238,16 +272,19 @@ class ProteinBorderTransformer(BaseEstimator, TransformerMixin):
     Get gene beginning / gene end binary flags from Domain CSV files.
     """
 
-    def __init__(self, field='protein_id'):
+    def __init__(self, field="protein_id"):
         self.field = field
 
     def transform(self, X):
         # current != next (exclude last element because we don't have a next value)
         borders = list(X[self.field][:-1].values != X[self.field][1:].values)
-        return pd.DataFrame({
-            'protein_start': np.array([True] + borders),
-            'protein_end': np.array(borders + [True])
-        }, index=X.index)[['protein_start','protein_end']].astype(np.uint8)
+        return pd.DataFrame(
+            {
+                "protein_start": np.array([True] + borders),
+                "protein_end": np.array(borders + [True]),
+            },
+            index=X.index,
+        )[["protein_start", "protein_end"]].astype(np.uint8)
 
     def fit(self, X, y=None):
         return self
@@ -260,12 +297,14 @@ class GeneDistanceTransformer(BaseEstimator, TransformerMixin):
     """
 
     def __init__(self, norm_distance):
-        logging.warning('Warning! Do not use the distance transformer for merged samples - the distance would be invalid on sample borders')
+        logging.warning(
+            "Warning! Do not use the distance transformer for merged samples - the distance would be invalid on sample borders"
+        )
         self.norm_distance = norm_distance
 
     def transform(self, X):
-        gene_starts = X['gene_start'].values
-        gene_ends = X['gene_end'].values
+        gene_starts = X["gene_start"].values
+        gene_ends = X["gene_end"].values
         previous_gene_ends = np.concatenate([[0], gene_ends[:-1]])
         distances = (gene_starts - previous_gene_ends) / self.norm_distance
         # replace negative values with zeros
@@ -275,10 +314,12 @@ class GeneDistanceTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
 
+
 class ColumnSelectTransformer(BaseEstimator, TransformerMixin):
     """
     Select given columns of input DataFrame
     """
+
     def __init__(self, columns):
         self.columns = columns
 
@@ -293,7 +334,8 @@ class ColumnSelectTransformerDescription(BaseEstimator, TransformerMixin):
     """
     Select given columns of input DataFrame
     """
-    def __init__(self, columns='description'):
+
+    def __init__(self, columns="description"):
         self.columns = columns
         self.length = 64
 
@@ -306,16 +348,19 @@ class ColumnSelectTransformerDescription(BaseEstimator, TransformerMixin):
         Returns:
             str2idx (np.ndarray): Indexes of characters in s
         """
+
         def str_to_indexes(s):
 
-            alphabet = "abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\/\\|_@#$%^&*~`+-=<>()[]{}"
+            alphabet = (
+                "abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\/\\|_@#$%^&*~`+-=<>()[]{}"
+            )
             char_dict = {}
             for idx, char in enumerate(alphabet):
                 char_dict[char] = idx + 1
 
             s = str(s).lower()
             max_length = min(len(s), self.length)
-            str2idx = np.zeros(self.length, dtype='int64')
+            str2idx = np.zeros(self.length, dtype="int64")
             for i in range(1, max_length + 1):
                 c = s[-i]
                 if c in char_dict:
@@ -323,7 +368,9 @@ class ColumnSelectTransformerDescription(BaseEstimator, TransformerMixin):
 
             return str2idx
 
-        str2idx = pd.DataFrame([str_to_indexes(i) for i in X['description']], index=X.index)
+        str2idx = pd.DataFrame(
+            [str_to_indexes(i) for i in X["description"]], index=X.index
+        )
 
         return str2idx
 
