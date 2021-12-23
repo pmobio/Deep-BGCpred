@@ -138,10 +138,10 @@ Prepare the training dataset to train the models for BGC prediction and classifi
 - Positive (BGC) training data provided by DeepBGC [1]. If you want to generate your own BGC training dataset, please see "Prepare the training data" section mentioned above.
 - Negative (Non-BGC) training data. Your can use `GeneSwap_Negatives.pfam.new.tsv` as the negative samples to train the predition model. For the classification stage,  the negative samples are taken from two sources: data generation based on the negative samples released by [1] (2000 samples), and the non-BGC samples incorrectly predicted by Bi-LSTM network in the preceding stage of the training process (102 samples). 
 
-- Validation dataset [1, 2]: Needed for BGC detection. Contigs with annotated BGC and non-BGC regions, see https://github.com/pmobio/Deep-BGCpred/releases/v0.1.0/release.
+- Validation dataset [1, 2]: Needed for BGC detection. Contigs with annotated BGC and non-BGC regions, see https://github.com/yangziyi1990/Deep-BGCpred/releases.
 - Trained Pfam2vec vectors provided by DeepBGC [1]: "Vocabulary" converting Pfam IDs to meaningful numeric vectors, results from https://github.com/Merck/deepbgc/releases/tag/v0.1.0.
-- Annotated Clan and description information: Record the Pfam, Clan and description information. You can see  https://github.com/pmobio/Deep-BGCpred/releases/v0.1.0/release.
-- Pfam-Pfam interaction file. Record the interaction information of Pfam-Pfam interaction (PPI).  https://github.com/pmobio/Deep-BGCpred/releases/v0.1.0/release.
+- Annotated Clan and description information: Record the Pfam, Clan and description information. 
+- Pfam-Pfam interaction file. Record the interaction information of Pfam-Pfam interaction (PPI).
 - BGC.Classes.csv: Chemical product class used to train the random forest model.
 - JSON configuration files: See JSON section below.
 
