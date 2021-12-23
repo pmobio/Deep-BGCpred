@@ -9,8 +9,6 @@ import logging
 from deepbgcpred.command.base import BaseCommand
 import os
 from deepbgcpred import util
-import pandas as pd
-
 from deepbgcpred.output.bgc_genbank import BGCGenbankWriter
 from deepbgcpred.output.evaluation.pr_plot import PrecisionRecallPlotWriter
 from deepbgcpred.output.evaluation.roc_plot import ROCPlotWriter
@@ -18,6 +16,7 @@ from deepbgcpred.output.readme import ReadmeWriter
 from deepbgcpred.pipeline.annotator import DeepBGCpredAnnotator
 from deepbgcpred.pipeline.detector import DeepBGCpredDetector
 from deepbgcpred.pipeline.classifier import DeepBGCpredClassifier
+from deepbgcpred.models.screening import DeepBGCpredScreening
 from deepbgcpred.output.genbank import GenbankWriter
 from deepbgcpred.output.evaluation.bgc_region_plot import BGCRegionPlotWriter
 from deepbgcpred.output.cluster_tsv import ClusterTSVWriter
@@ -428,78 +427,7 @@ Examples:
 
         # The dual-model serial screening
         if screening:
-            # check each detector and classifier for the dual-model serial screening.
+            # Add clan information and description to the prepared data
+            data_screen = DeepBGCpredScreening(output, detectors, classifiers)
+            data_screen.screening()
 
-            if not os.path.exists(os.path.join(output, "screen")):
-                os.mkdir(os.path.join(output, "screen"))
-
-            for detector, classifier in zip(detectors, classifiers):
-                # load the pfam and class file
-                prefix_name = output.split("/")[-1]
-                pfam_bgc = pd.read_csv(
-                    os.path.join(output, prefix_name + ".pfam.tsv"), sep="\t"
-                )
-                class_bgc = pd.read_csv(
-                    os.path.join(output, prefix_name + ".bgc.tsv"), sep="\t"
-                )
-                pfam_old = pd.read_csv(
-                    os.path.join(output, prefix_name + ".pfam_output.tsv"), sep="\t"
-                )
-
-                # select detector information from the full table
-                detector = detector.split("/")[-1].split(".")[0]
-                classifier = classifier.split("/")[-1].split(".")[0]
-                model_bgc = class_bgc.loc[
-                    class_bgc["detector"] == detector
-                ].reset_index(drop=True)
-                model_sub_bgc = model_bgc.loc[
-                    model_bgc[classifier] == "Non_BGC"
-                ].reset_index(drop=True)
-                class_sub_bgc = class_bgc.loc[
-                    class_bgc[detector + "_score"] == "Non_BGC"
-                ].reset_index(drop=True)
-
-                model_concat_bgc = pd.concat(
-                    [model_sub_bgc, class_sub_bgc]
-                ).reset_index(drop=True)
-
-                for i in range(model_concat_bgc.shape[0]):
-                    nucl_start = model_concat_bgc["nucl_start"][i]
-                    nucl_end = model_concat_bgc["nucl_end"][i]
-                    sequence_id = model_concat_bgc["sequence_id"][i]
-                    pfam_sub_bgc = pfam_bgc[
-                        (pfam_bgc["gene_start"] >= nucl_start)
-                        & (pfam_bgc["gene_end"] <= nucl_end)
-                    ]
-                    pfam_sub_idx = pfam_sub_bgc[
-                        pfam_sub_bgc["sequence_id"] == sequence_id
-                    ].index
-                    pfam_bgc.loc[pfam_sub_idx, detector + "_score"] = 0
-
-                pfam_old = pfam_old.drop([detector], axis=1)
-                pfam_new = pd.concat([pfam_old, pfam_bgc[detector + "_score"]], axis=1)
-                pfam_new = pfam_new.rename(columns={detector + "_score": detector})
-
-                class_bgc_s = class_bgc[class_bgc["detector"] == detector].reset_index(
-                    drop=True
-                )
-                class_bgc_s = class_bgc_s.drop(
-                    class_bgc_s[class_bgc_s[classifier] == "Non_BGC"].index
-                )
-
-                pfam_new.to_csv(
-                    os.path.join(
-                        output,
-                        "Screen/" + detector + "_" + classifier + ".pfam_filter.tsv",
-                    ),
-                    index=None,
-                    sep="\t",
-                )
-                class_bgc_s.to_csv(
-                    os.path.join(
-                        output,
-                        "Screen/" + detector + "_" + classifier + ".bgc_filter.tsv",
-                    ),
-                    index=None,
-                    sep="\t",
-                )
