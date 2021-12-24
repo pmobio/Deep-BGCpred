@@ -262,7 +262,7 @@ This will produce a mySequence directory with multiple files and a README.txt wi
 
 Example output:
 
-![](https://github.com/yangziyi1990/Deep-BGCpred/blob/main/images/Figure2_genome.png)
+![](https://github.com/yangziyi1990/Deep-BGCpred/blob/main/images/Figure8_genome_anno.png)
 
 
 
